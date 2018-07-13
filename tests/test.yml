@@ -1,5 +1,4 @@
 - hosts: all
-  hosts: localhost
   gather_facts: false
   connection: local
   roles:
