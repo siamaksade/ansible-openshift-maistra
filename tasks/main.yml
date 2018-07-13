@@ -1,0 +1,35 @@
+---
+## Istio and Jaeger Install
+
+- name: check if istio deployed 
+  shell: "{{ openshift_cli }} get project istio-system"
+  register: istio_project_result
+  ignore_errors: true
+  changed_when: false
+
+- name: create istio-system project
+  shell: |
+    {{ openshift_cli }} new-project istio-system
+    {{ openshift_cli }} create sa openshift-ansible -n istio-system
+    {{ openshift_cli }} adm policy add-scc-to-user privileged -z openshift-ansible -n istio-system
+    {{ openshift_cli }} adm policy add-cluster-role-to-user cluster-admin -z openshift-ansible -n istio-system
+  when: istio_project_result|failed
+
+- name: install istio 
+  shell: |
+    {{ openshift_cli }} new-app {{ istio_installer_template }} \
+        --param=OPENSHIFT_ISTIO_MASTER_PUBLIC_URL={{ openshift_master_public }} \
+        --param=OPENSHIFT_ISTIO_KIALI_USERNAME={{ kiali_username }} \
+        --param=OPENSHIFT_ISTIO_KIALI_PASSWORD={{ kiali_password }} \
+        --param=OPENSHIFT_ISTIO_INSTALL_AUTH={{ enable_istio_auth }} \
+        --param=OPENSHIFT_RELEASE={{ openshift_version }} \
+        --param=OPENSHIFT_ISTIO_IMAGE_VERSION={{ istio_version }} \
+        -n istio-system
+  when: istio_project_result|failed
+
+- name: wait for istio sidecar-injector to initialize
+  shell: "{{ openshift_cli }} get deployment istio-sidecar-injector -o jsonpath='{.status.availableReplicas}' -n istio-system"
+  register: sidecar_injector_replicas
+  until: sidecar_injector_replicas.stdout == "1"
+  retries: "30"
+  delay: "30"
