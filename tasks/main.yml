@@ -13,7 +13,7 @@
     {{ openshift_cli }} create sa openshift-ansible -n istio-system
     {{ openshift_cli }} adm policy add-scc-to-user privileged -z openshift-ansible -n istio-system
     {{ openshift_cli }} adm policy add-cluster-role-to-user cluster-admin -z openshift-ansible -n istio-system
-  when: istio_project_result|failed
+  when: istio_project_result is failed
 
 - name: install istio 
   shell: |
@@ -25,7 +25,7 @@
         --param=OPENSHIFT_RELEASE={{ openshift_version }} \
         --param=OPENSHIFT_ISTIO_IMAGE_VERSION={{ istio_version }} \
         -n istio-system
-  when: istio_project_result|failed
+  when: istio_project_result is failed
 
 - name: wait for istio sidecar-injector to initialize
   shell: "{{ openshift_cli }} get deployment istio-sidecar-injector -o jsonpath='{.status.availableReplicas}' -n istio-system"
